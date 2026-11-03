@@ -1,0 +1,296 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Pillar 1: Global Default-Deny Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Core Primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidTimestampsOnCreate(data) {
+      return data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidTimestampsOnUpdate(data, oldData) {
+      return data.createdAt == oldData.createdAt &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    // 1. UserProfile Validation Blueprint
+    function isValidUserProfile(data, userId) {
+      return data.userId is string && data.userId == userId && data.userId.size() <= 128 &&
+             data.name is string && data.name.size() >= 1 && data.name.size() <= 100 &&
+             data.email is string && data.email.size() <= 150 &&
+             data.age is number && data.age >= 10 && data.age <= 120 &&
+             data.height is number && data.height >= 50 && data.height <= 260 &&
+             data.currentWeight is number && data.currentWeight >= 15 && data.currentWeight <= 350 &&
+             data.targetWeight is number && data.targetWeight >= 15 && data.targetWeight <= 350 &&
+             (!('gender' in data) || (data.gender is string && data.gender.size() <= 40)) &&
+             data.activityLevel is string && data.activityLevel.size() >= 1 && data.activityLevel.size() <= 40 &&
+             data.fitnessGoal is string && data.fitnessGoal in ['Lose Weight', 'Maintain Weight', 'Gain Weight'] &&
+             data.dietaryPreference is string && data.dietaryPreference.size() >= 1 && data.dietaryPreference.size() <= 60 &&
+             data.dailyCalorieGoal is number && data.dailyCalorieGoal >= 800 && data.dailyCalorieGoal <= 6000 &&
+             data.dailyWaterGoalMl is number && data.dailyWaterGoalMl >= 500 && data.dailyWaterGoalMl <= 10000 &&
+             data.language is string && data.language in ['en', 'bn', 'hi'] &&
+             data.isPremium is bool &&
+             data.dailyScansUsed is number && data.dailyScansUsed >= 0 && data.dailyScansUsed <= 1000 &&
+             data.lastScanDate is string && data.lastScanDate.size() <= 20;
+    }
+
+    // 2. FoodDiaryEntry Validation Blueprint
+    function isValidFoodDiaryEntry(data, userId) {
+      return data.userId is string && data.userId == userId && data.userId.size() <= 128 &&
+             data.foodName is string && data.foodName.size() >= 1 && data.foodName.size() <= 120 &&
+             data.quantity is number && data.quantity > 0 && data.quantity <= 5000 &&
+             data.calories is number && data.calories >= 0 && data.calories <= 5000 &&
+             data.protein is number && data.protein >= 0 && data.protein <= 500 &&
+             data.carbohydrates is number && data.carbohydrates >= 0 && data.carbohydrates <= 1000 &&
+             data.fat is number && data.fat >= 0 && data.fat <= 500 &&
+             data.fiber is number && data.fiber >= 0 && data.fiber <= 200 &&
+             data.sugar is number && data.sugar >= 0 && data.sugar <= 500 &&
+             data.mealType is string && data.mealType in ['Breakfast', 'Lunch', 'Dinner', 'Snacks'] &&
+             data.dateKey is string && data.dateKey.size() >= 1 && data.dateKey.size() <= 20 &&
+             data.source is string && data.source in ['AI Scan', 'Database', 'Manual', 'Copied'] &&
+             data.confidence is number && data.confidence >= 0 && data.confidence <= 1 &&
+             data.notes is string && data.notes.size() <= 300;
+    }
+
+    // 3. WeightRecord Validation Blueprint
+    function isValidWeightRecord(data, userId) {
+      return data.userId is string && data.userId == userId && data.userId.size() <= 128 &&
+             data.weight is number && data.weight >= 15 && data.weight <= 350 &&
+             data.dateKey is string && data.dateKey.size() >= 1 && data.dateKey.size() <= 20 &&
+             data.note is string && data.note.size() <= 200;
+    }
+
+    // 4. WaterRecord Validation Blueprint
+    function isValidWaterRecord(data, userId) {
+      return data.userId is string && data.userId == userId && data.userId.size() <= 128 &&
+             data.quantity is number && data.quantity > 0 && data.quantity <= 5000 &&
+             data.dateKey is string && data.dateKey.size() >= 1 && data.dateKey.size() <= 20;
+    }
+
+    // 5. MealPlanEntry Validation Blueprint
+    function isValidMealPlanEntry(data, userId) {
+      return data.userId is string && data.userId == userId && data.userId.size() <= 128 &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 150 &&
+             data.dietType is string && data.dietType.size() >= 1 && data.dietType.size() <= 60 &&
+             data.targetCalories is number && data.targetCalories >= 500 && data.targetCalories <= 6000 &&
+             data.breakfastSummary is string && data.breakfastSummary.size() >= 1 && data.breakfastSummary.size() <= 500 &&
+             data.lunchSummary is string && data.lunchSummary.size() >= 1 && data.lunchSummary.size() <= 500 &&
+             data.dinnerSummary is string && data.dinnerSummary.size() >= 1 && data.dinnerSummary.size() <= 500 &&
+             data.snacksSummary is string && data.snacksSummary.size() >= 1 && data.snacksSummary.size() <= 500 &&
+             data.coachTips is string && data.coachTips.size() <= 600 &&
+             data.dateKey is string && data.dateKey.size() >= 1 && data.dateKey.size() <= 20;
+    }
+
+    // 6. AiCoachMessage Validation Blueprint
+    function isValidAiCoachMessage(data, userId) {
+      return data.userId is string && data.userId == userId && data.userId.size() <= 128 &&
+             data.question is string && data.question.size() >= 1 && data.question.size() <= 1000 &&
+             data.response is string && data.response.size() >= 1 && data.response.size() <= 4000 &&
+             data.language is string && data.language in ['en', 'bn', 'hi'];
+    }
+
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow list: if isOwner(userId) && existing().userId == request.auth.uid;
+
+      allow create: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       incoming().keys().hasAll([
+                         'userId', 'name', 'email', 'age', 'height', 'currentWeight',
+                         'targetWeight', 'activityLevel', 'fitnessGoal', 'dietaryPreference',
+                         'dailyCalorieGoal', 'dailyWaterGoalMl', 'language', 'isPremium',
+                         'dailyScansUsed', 'lastScanDate', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'name', 'email', 'age', 'height', 'currentWeight',
+                         'targetWeight', 'gender', 'activityLevel', 'fitnessGoal', 'dietaryPreference',
+                         'dailyCalorieGoal', 'dailyWaterGoalMl', 'language', 'isPremium',
+                         'dailyScansUsed', 'lastScanDate', 'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidUserProfile(incoming(), userId) &&
+                       isValidTimestampsOnCreate(incoming());
+
+      allow update: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       isValidUserProfile(incoming(), userId) &&
+                       incoming().userId == existing().userId &&
+                       isValidTimestampsOnUpdate(incoming(), existing()) &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'name', 'email', 'age', 'height', 'currentWeight',
+                         'targetWeight', 'gender', 'activityLevel', 'fitnessGoal', 'dietaryPreference',
+                         'dailyCalorieGoal', 'dailyWaterGoalMl', 'language', 'isPremium',
+                         'dailyScansUsed', 'lastScanDate', 'updatedAt'
+                       ]);
+
+      allow delete: if isOwner(userId) && isValidId(userId);
+
+      // Subcollection: foodDiary
+      match /foodDiary/{entryId} {
+        allow get: if isOwner(userId) && isValidId(userId) && isValidId(entryId);
+        allow list: if isOwner(userId) && existing().userId == request.auth.uid;
+
+        allow create: if isOwner(userId) &&
+                         isValidId(userId) &&
+                         isValidId(entryId) &&
+                         incoming().keys().hasAll([
+                           'userId', 'foodName', 'quantity', 'calories', 'protein',
+                           'carbohydrates', 'fat', 'fiber', 'sugar', 'mealType',
+                           'dateKey', 'source', 'confidence', 'notes', 'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'userId', 'foodName', 'quantity', 'calories', 'protein',
+                           'carbohydrates', 'fat', 'fiber', 'sugar', 'mealType',
+                           'dateKey', 'source', 'confidence', 'notes', 'createdAt', 'updatedAt'
+                         ]) &&
+                         isValidFoodDiaryEntry(incoming(), userId) &&
+                         isValidTimestampsOnCreate(incoming());
+
+        allow update: if isOwner(userId) &&
+                         isValidId(userId) &&
+                         isValidId(entryId) &&
+                         isValidFoodDiaryEntry(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         isValidTimestampsOnUpdate(incoming(), existing()) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'foodName', 'quantity', 'calories', 'protein',
+                           'carbohydrates', 'fat', 'fiber', 'sugar', 'mealType',
+                           'dateKey', 'source', 'confidence', 'notes', 'updatedAt'
+                         ]);
+
+        allow delete: if isOwner(userId) && isValidId(userId) && isValidId(entryId);
+      }
+
+      // Subcollection: weightHistory
+      match /weightHistory/{recordId} {
+        allow get: if isOwner(userId) && isValidId(userId) && isValidId(recordId);
+        allow list: if isOwner(userId) && existing().userId == request.auth.uid;
+
+        allow create: if isOwner(userId) &&
+                         isValidId(userId) &&
+                         isValidId(recordId) &&
+                         incoming().keys().hasAll(['userId', 'weight', 'dateKey', 'note', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'weight', 'dateKey', 'note', 'createdAt', 'updatedAt']) &&
+                         isValidWeightRecord(incoming(), userId) &&
+                         isValidTimestampsOnCreate(incoming());
+
+        allow update: if isOwner(userId) &&
+                         isValidId(userId) &&
+                         isValidId(recordId) &&
+                         isValidWeightRecord(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         isValidTimestampsOnUpdate(incoming(), existing()) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['weight', 'dateKey', 'note', 'updatedAt']);
+
+        allow delete: if isOwner(userId) && isValidId(userId) && isValidId(recordId);
+      }
+
+      // Subcollection: waterHistory
+      match /waterHistory/{recordId} {
+        allow get: if isOwner(userId) && isValidId(userId) && isValidId(recordId);
+        allow list: if isOwner(userId) && existing().userId == request.auth.uid;
+
+        allow create: if isOwner(userId) &&
+                         isValidId(userId) &&
+                         isValidId(recordId) &&
+                         incoming().keys().hasAll(['userId', 'quantity', 'dateKey', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'quantity', 'dateKey', 'createdAt', 'updatedAt']) &&
+                         isValidWaterRecord(incoming(), userId) &&
+                         isValidTimestampsOnCreate(incoming());
+
+        allow update: if isOwner(userId) &&
+                         isValidId(userId) &&
+                         isValidId(recordId) &&
+                         isValidWaterRecord(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         isValidTimestampsOnUpdate(incoming(), existing()) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['quantity', 'dateKey', 'updatedAt']);
+
+        allow delete: if isOwner(userId) && isValidId(userId) && isValidId(recordId);
+      }
+
+      // Subcollection: mealPlans
+      match /mealPlans/{planId} {
+        allow get: if isOwner(userId) && isValidId(userId) && isValidId(planId);
+        allow list: if isOwner(userId) && existing().userId == request.auth.uid;
+
+        allow create: if isOwner(userId) &&
+                         isValidId(userId) &&
+                         isValidId(planId) &&
+                         incoming().keys().hasAll([
+                           'userId', 'title', 'dietType', 'targetCalories',
+                           'breakfastSummary', 'lunchSummary', 'dinnerSummary',
+                           'snacksSummary', 'coachTips', 'dateKey', 'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'userId', 'title', 'dietType', 'targetCalories',
+                           'breakfastSummary', 'lunchSummary', 'dinnerSummary',
+                           'snacksSummary', 'coachTips', 'dateKey', 'createdAt', 'updatedAt'
+                         ]) &&
+                         isValidMealPlanEntry(incoming(), userId) &&
+                         isValidTimestampsOnCreate(incoming());
+
+        allow update: if isOwner(userId) &&
+                         isValidId(userId) &&
+                         isValidId(planId) &&
+                         isValidMealPlanEntry(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         isValidTimestampsOnUpdate(incoming(), existing()) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'title', 'dietType', 'targetCalories',
+                           'breakfastSummary', 'lunchSummary', 'dinnerSummary',
+                           'snacksSummary', 'coachTips', 'dateKey', 'updatedAt'
+                         ]);
+
+        allow delete: if isOwner(userId) && isValidId(userId) && isValidId(planId);
+      }
+
+      // Subcollection: aiHistory
+      match /aiHistory/{messageId} {
+        allow get: if isOwner(userId) && isValidId(userId) && isValidId(messageId);
+        allow list: if isOwner(userId) && existing().userId == request.auth.uid;
+
+        allow create: if isOwner(userId) &&
+                         isValidId(userId) &&
+                         isValidId(messageId) &&
+                         incoming().keys().hasAll(['userId', 'question', 'response', 'language', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'question', 'response', 'language', 'createdAt', 'updatedAt']) &&
+                         isValidAiCoachMessage(incoming(), userId) &&
+                         isValidTimestampsOnCreate(incoming());
+
+        allow update: if isOwner(userId) &&
+                         isValidId(userId) &&
+                         isValidId(messageId) &&
+                         isValidAiCoachMessage(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         isValidTimestampsOnUpdate(incoming(), existing()) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['question', 'response', 'language', 'updatedAt']);
+
+        allow delete: if isOwner(userId) && isValidId(userId) && isValidId(messageId);
+      }
+    }
+  }
+}

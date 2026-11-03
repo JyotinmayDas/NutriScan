@@ -1,0 +1,191 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile, body metrics, dietary preferences, daily goals, and scan quota state.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Authenticated user UID" },
+        "name": { "type": "string", "description": "Display name" },
+        "email": { "type": "string", "description": "User email address" },
+        "age": { "type": "integer", "description": "Age in years" },
+        "height": { "type": "number", "description": "Height in cm" },
+        "currentWeight": { "type": "number", "description": "Current weight in kg" },
+        "targetWeight": { "type": "number", "description": "Target weight in kg" },
+        "gender": { "type": "string", "description": "Optional gender for BMR estimation" },
+        "activityLevel": { "type": "string", "description": "Activity level multiplier category" },
+        "fitnessGoal": { "type": "string", "description": "Lose Weight, Maintain Weight, or Gain Weight" },
+        "dietaryPreference": { "type": "string", "description": "Dietary preference e.g. Vegetarian, Non-Vegetarian, Bengali Traditional" },
+        "dailyCalorieGoal": { "type": "integer", "description": "Estimated or custom daily calorie target in kcal" },
+        "dailyWaterGoalMl": { "type": "integer", "description": "Daily hydration target in ml" },
+        "language": { "type": "string", "description": "Preferred language code (en, bn, hi)" },
+        "isPremium": { "type": "boolean", "description": "Whether user has unlocked NutriScan Pro" },
+        "dailyScansUsed": { "type": "integer", "description": "Number of AI scans used on lastScanDate" },
+        "lastScanDate": { "type": "string", "description": "Date string YYYY-MM-DD of last scan" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp of creation (FieldValue.serverTimestamp())" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp of last update (FieldValue.serverTimestamp())" }
+      },
+      "required": [
+        "userId",
+        "name",
+        "email",
+        "age",
+        "height",
+        "currentWeight",
+        "targetWeight",
+        "activityLevel",
+        "fitnessGoal",
+        "dietaryPreference",
+        "dailyCalorieGoal",
+        "dailyWaterGoalMl",
+        "language",
+        "isPremium",
+        "dailyScansUsed",
+        "lastScanDate",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "FoodDiaryEntry": {
+      "title": "FoodDiaryEntry",
+      "description": "Single food log entry in a user's daily diary.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner user UID" },
+        "foodName": { "type": "string", "description": "Name of the dish or food item" },
+        "quantity": { "type": "number", "description": "Portion weight in grams" },
+        "calories": { "type": "integer", "description": "Calories in kcal" },
+        "protein": { "type": "number", "description": "Protein in grams" },
+        "carbohydrates": { "type": "number", "description": "Carbohydrates in grams" },
+        "fat": { "type": "number", "description": "Fat in grams" },
+        "fiber": { "type": "number", "description": "Dietary fiber in grams" },
+        "sugar": { "type": "number", "description": "Sugar in grams" },
+        "mealType": { "type": "string", "description": "Breakfast, Lunch, Dinner, or Snacks" },
+        "dateKey": { "type": "string", "description": "Date key in YYYY-MM-DD format" },
+        "source": { "type": "string", "description": "AI Scan, Database, Manual, or Copied" },
+        "confidence": { "type": "number", "description": "AI confidence score between 0.0 and 1.0" },
+        "notes": { "type": "string", "description": "Cooking method or AI assumptions" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server creation timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server update timestamp" }
+      },
+      "required": [
+        "userId",
+        "foodName",
+        "quantity",
+        "calories",
+        "protein",
+        "carbohydrates",
+        "fat",
+        "fiber",
+        "sugar",
+        "mealType",
+        "dateKey",
+        "source",
+        "confidence",
+        "notes",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "WeightRecord": {
+      "title": "WeightRecord",
+      "description": "Historical weight measurement entry.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner user UID" },
+        "weight": { "type": "number", "description": "Measured weight in kg" },
+        "dateKey": { "type": "string", "description": "Date key YYYY-MM-DD" },
+        "note": { "type": "string", "description": "Optional note" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server creation timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server update timestamp" }
+      },
+      "required": ["userId", "weight", "dateKey", "note", "createdAt", "updatedAt"]
+    },
+    "WaterRecord": {
+      "title": "WaterRecord",
+      "description": "Water hydration intake entry in milliliters.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner user UID" },
+        "quantity": { "type": "integer", "description": "Water intake amount in ml" },
+        "dateKey": { "type": "string", "description": "Date key YYYY-MM-DD" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server creation timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server update timestamp" }
+      },
+      "required": ["userId", "quantity", "dateKey", "createdAt", "updatedAt"]
+    },
+    "MealPlanEntry": {
+      "title": "MealPlanEntry",
+      "description": "AI-generated personalized daily meal plan.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner user UID" },
+        "title": { "type": "string", "description": "Meal plan title" },
+        "dietType": { "type": "string", "description": "Diet preference category" },
+        "targetCalories": { "type": "integer", "description": "Target daily kcal" },
+        "breakfastSummary": { "type": "string", "description": "Recommended breakfast items and kcal" },
+        "lunchSummary": { "type": "string", "description": "Recommended lunch items and kcal" },
+        "dinnerSummary": { "type": "string", "description": "Recommended dinner items and kcal" },
+        "snacksSummary": { "type": "string", "description": "Recommended snacks items and kcal" },
+        "coachTips": { "type": "string", "description": "Nutritional coaching tips" },
+        "dateKey": { "type": "string", "description": "Date key YYYY-MM-DD" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server creation timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server update timestamp" }
+      },
+      "required": [
+        "userId",
+        "title",
+        "dietType",
+        "targetCalories",
+        "breakfastSummary",
+        "lunchSummary",
+        "dinnerSummary",
+        "snacksSummary",
+        "coachTips",
+        "dateKey",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "AiCoachMessage": {
+      "title": "AiCoachMessage",
+      "description": "Saved Q&A interaction with the AI Nutrition Coach.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner user UID" },
+        "question": { "type": "string", "description": "User question prompt" },
+        "response": { "type": "string", "description": "AI Nutrition Coach response" },
+        "language": { "type": "string", "description": "Language of conversation" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server creation timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server update timestamp" }
+      },
+      "required": ["userId", "question", "response", "language", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Per-user profile and nutrition goal settings."
+    },
+    "/users/{userId}/foodDiary/{entryId}": {
+      "schema": { "$ref": "#/entities/FoodDiaryEntry" },
+      "description": "Per-user daily food diary entries."
+    },
+    "/users/{userId}/weightHistory/{recordId}": {
+      "schema": { "$ref": "#/entities/WeightRecord" },
+      "description": "Per-user weight progress records."
+    },
+    "/users/{userId}/waterHistory/{recordId}": {
+      "schema": { "$ref": "#/entities/WaterRecord" },
+      "description": "Per-user daily water intake logs."
+    },
+    "/users/{userId}/mealPlans/{planId}": {
+      "schema": { "$ref": "#/entities/MealPlanEntry" },
+      "description": "Per-user AI meal plans."
+    },
+    "/users/{userId}/aiHistory/{messageId}": {
+      "schema": { "$ref": "#/entities/AiCoachMessage" },
+      "description": "Per-user AI Nutrition Coach conversation history."
+    }
+  }
+}
