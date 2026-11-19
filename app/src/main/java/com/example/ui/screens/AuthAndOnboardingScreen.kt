@@ -77,13 +77,20 @@ import com.example.ui.theme.SageHeroCardStart
 
 @Composable
 fun AuthScreen(
-    onAuthSuccess: () -> Unit
+    onAuthSuccess: () -> Unit,
+    onContinueAsGuest: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val credentialManager = remember { CredentialManager.create(context) }
     var authError by remember { mutableStateOf<String?>(null) }
     var selectedLanguage by remember { mutableStateOf("en") }
+    var showPrivacyPolicyPage by remember { mutableStateOf(false) }
+
+    if (showPrivacyPolicyPage) {
+        PrivacyPolicyScreen(onBack = { showPrivacyPolicyPage = false })
+        return
+    }
 
     // Attempt silent auto sign-in once on launch
     LaunchedEffect(Unit) {
@@ -122,17 +129,19 @@ fun AuthScreen(
             ) {
                 Surface(
                     shape = RoundedCornerShape(50),
-                    color = Color.White.copy(alpha = 0.85f)
+                    color = Color.White.copy(alpha = 0.92f),
+                    shadowElevation = 2.dp
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Eco,
-                            contentDescription = null,
-                            tint = FreshGreenPrimary,
-                            modifier = Modifier.size(18.dp)
+                        Image(
+                            painter = painterResource(id = R.drawable.img_nutriscan_logo),
+                            contentDescription = "NutriScan Logo",
+                            modifier = Modifier
+                                .size(22.dp)
+                                .clip(RoundedCornerShape(6.dp))
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
@@ -165,115 +174,40 @@ fun AuthScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
-            // Circular Floating Bowl Showcase (Matching Uploaded Image 9 Center Screen)
+            // NutriScan Brand Logo Hero Showcase
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(290.dp)
             ) {
-                // Decorative soft mint halo circle
+                // Soft mint-lime halo circle matching the logo
                 Box(
                     modifier = Modifier
-                        .size(268.dp)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.55f))
+                        .size(272.dp)
+                        .clip(RoundedCornerShape(48.dp))
+                        .background(Color.White.copy(alpha = 0.65f))
                 )
 
-                // Decorative floating leaf badges around the bowl
-                Surface(
-                    shape = CircleShape,
-                    color = Color(0xFFDCFCE7),
-                    shadowElevation = 4.dp,
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .offset(x = 18.dp, y = 14.dp)
-                        .size(44.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = Icons.Default.Eco,
-                            contentDescription = null,
-                            tint = FreshGreenPrimary,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-                }
-
-                Surface(
-                    shape = RoundedCornerShape(50),
-                    color = Color.White,
-                    shadowElevation = 6.dp,
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .offset(x = (-8).dp, y = 22.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.LocalFireDepartment,
-                            contentDescription = null,
-                            tint = Color(0xFFF59E0B),
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = "480 kcal",
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = DarkCharcoalText
-                        )
-                    }
-                }
-
-                // Circular Food Bowl Image
+                // Official NutriScan Logo Artwork
                 Image(
-                    painter = painterResource(id = R.drawable.img_hero_nutrition_bowl_1793693566593),
-                    contentDescription = "Balanced Nutrition Bowl",
-                    contentScale = ContentScale.Crop,
+                    painter = painterResource(id = R.drawable.img_nutriscan_logo),
+                    contentDescription = "NutriScan Official Logo",
+                    contentScale = ContentScale.Fit,
                     modifier = Modifier
-                        .size(236.dp)
-                        .shadow(16.dp, CircleShape)
-                        .clip(CircleShape)
-                        .border(6.dp, Color.White, CircleShape)
+                        .size(252.dp)
+                        .shadow(16.dp, RoundedCornerShape(44.dp))
+                        .clip(RoundedCornerShape(44.dp))
+                        .background(Color.White)
+                        .border(4.dp, Color.White, RoundedCornerShape(44.dp))
+                        .testTag("auth_brand_logo_image")
                 )
-
-                // Bottom-left AI Vision badge
-                Surface(
-                    shape = RoundedCornerShape(50),
-                    color = DarkCharcoalText,
-                    shadowElevation = 6.dp,
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .offset(x = 12.dp, y = (-12).dp)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.AutoAwesome,
-                            contentDescription = null,
-                            tint = LimeAccentStrong,
-                            modifier = Modifier.size(15.dp)
-                        )
-                        Spacer(modifier = Modifier.width(5.dp))
-                        Text(
-                            text = "Smart Food Scanner",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
             }
         }
 
-        // Center Typography ("Eat Smart, Live Better" from Uploaded Image 9)
+        // Center Typography ("Scan Your Food. Know Your Nutrition.")
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.padding(vertical = 12.dp)
@@ -282,10 +216,10 @@ fun AuthScreen(
                 text = when (selectedLanguage) {
                     "bn" -> "স্মার্ট খাবার,"
                     "hi" -> "स्मार्ट खाएं,"
-                    else -> "Eat Smart,"
+                    else -> "Scan Your Food,"
                 },
-                fontSize = 36.sp,
-                lineHeight = 42.sp,
+                fontSize = 34.sp,
+                lineHeight = 40.sp,
                 fontWeight = FontWeight.ExtraBold,
                 color = MaterialTheme.colorScheme.onBackground,
                 textAlign = TextAlign.Center
@@ -294,10 +228,10 @@ fun AuthScreen(
                 text = when (selectedLanguage) {
                     "bn" -> "সুস্থ জীবন"
                     "hi" -> "बेहतर जिएं"
-                    else -> "Live Better"
+                    else -> "Know Your Nutrition"
                 },
-                fontSize = 36.sp,
-                lineHeight = 42.sp,
+                fontSize = 32.sp,
+                lineHeight = 38.sp,
                 fontWeight = FontWeight.ExtraBold,
                 color = FreshGreenPrimary,
                 textAlign = TextAlign.Center
@@ -318,7 +252,7 @@ fun AuthScreen(
 
             Spacer(modifier = Modifier.height(18.dp))
 
-            // Pager Indicator Dots (•  —  •) matching Image 9
+            // Pager Indicator Dots (•  —  •)
             Row(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -370,7 +304,7 @@ fun AuthScreen(
             // Styled Pill Container wrapping the mandatory GoogleSignInButton
             Card(
                 shape = RoundedCornerShape(50),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF7CB518)),
+                colors = CardDefaults.cardColors(containerColor = FreshGreenPrimary),
                 elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -408,14 +342,62 @@ fun AuthScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Guest Mode Button for immediate local feature exploration
+            OutlinedButton(
+                onClick = onContinueAsGuest,
+                shape = RoundedCornerShape(50),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp)
+                    .testTag("continue_as_guest_button")
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Restaurant,
+                    contentDescription = null,
+                    tint = DarkCharcoalText,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = when (selectedLanguage) {
+                        "bn" -> "গেস্ট মোডে চালিয়ে যান (Guest Mode)"
+                        "hi" -> "गेस्ट मोड में जारी रखें (Guest Mode)"
+                        else -> "Continue as Guest (Try Features)"
+                    },
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = DarkCharcoalText
+                )
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
 
             Text(
-                text = "All calorie & nutrient calculations are educational estimates and not medical advice.",
+                text = "Guest Mode lets you try food scanning, database search, and calorie tracking locally. Sign in with Google anytime for cloud sync.",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
             )
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Surface(
+                shape = RoundedCornerShape(50),
+                color = Color.White.copy(alpha = 0.75f),
+                modifier = Modifier
+                    .clickable { showPrivacyPolicyPage = true }
+                    .testTag("auth_privacy_policy_button")
+            ) {
+                Text(
+                    text = "Privacy Policy & Terms of Use",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = FreshGreenPrimary,
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
+                )
+            }
         }
     }
 }
@@ -424,6 +406,7 @@ fun AuthScreen(
 @Composable
 fun OnboardingProfileDialog(
     currentProfile: UserProfile,
+    isInitialSetup: Boolean = false,
     onSaveProfile: (UserProfile) -> Unit,
     onSkip: () -> Unit
 ) {
@@ -476,12 +459,12 @@ fun OnboardingProfileDialog(
             Spacer(modifier = Modifier.width(10.dp))
             Column {
                 Text(
-                    text = "Personalize Your Plan",
+                    text = if (isInitialSetup) "Create Your Profile" else "Personalize Your Plan",
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.ExtraBold
                 )
                 Text(
-                    text = "Tailor daily calorie & macro goals",
+                    text = if (isInitialSetup) "Set your goals first so your history saves cleanly" else "Tailor daily calorie & macro goals",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -545,7 +528,7 @@ fun OnboardingProfileDialog(
                     label = { Text(goal) },
                     shape = RoundedCornerShape(50),
                     colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = DarkCharcoalText,
+                        selectedContainerColor = FreshGreenPrimary,
                         selectedLabelColor = Color.White
                     )
                 )
@@ -661,7 +644,7 @@ fun OnboardingProfileDialog(
                 },
                 shape = RoundedCornerShape(50),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = DarkCharcoalText,
+                    containerColor = FreshGreenPrimary,
                     contentColor = Color.White
                 ),
                 modifier = Modifier
@@ -669,7 +652,10 @@ fun OnboardingProfileDialog(
                     .height(52.dp)
                     .testTag("save_onboarding_button")
             ) {
-                Text("Save Goals", fontWeight = FontWeight.Bold)
+                Text(
+                    text = if (isInitialSetup) "Create Profile" else "Save Goals",
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
     }

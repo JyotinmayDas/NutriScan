@@ -3,6 +3,6 @@
     <item
         android:width="66dp"
         android:height="66dp"
-        android:drawable="@drawable/img_launcher_nutriscan_1793693564655"
+        android:drawable="@drawable/nutriscan_icon_v2_fg"
         android:gravity="center" />
 </layer-list>

@@ -113,6 +113,24 @@ service cloud.firestore {
              data.language is string && data.language in ['en', 'bn', 'hi'];
     }
 
+    // 7. SavedRecipe Validation Blueprint
+    function isValidSavedRecipe(data, userId) {
+      return data.userId is string && data.userId == userId && data.userId.size() <= 128 &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 140 &&
+             data.category is string && data.category in ['Scanned Combo', 'Custom Meal Plan', 'Favorite Meal'] &&
+             data.mealType is string && data.mealType in ['Breakfast', 'Lunch', 'Dinner', 'Snacks', 'Full Day'] &&
+             data.totalCalories is number && data.totalCalories >= 0 && data.totalCalories <= 10000 &&
+             data.totalProteinG is number && data.totalProteinG >= 0 && data.totalProteinG <= 1000 &&
+             data.totalCarbsG is number && data.totalCarbsG >= 0 && data.totalCarbsG <= 2000 &&
+             data.totalFatG is number && data.totalFatG >= 0 && data.totalFatG <= 1000 &&
+             data.totalFiberG is number && data.totalFiberG >= 0 && data.totalFiberG <= 500 &&
+             data.totalWeightG is number && data.totalWeightG >= 0 && data.totalWeightG <= 15000 &&
+             data.items is list && data.items.size() >= 1 && data.items.size() <= 30 && data.items[0] is map &&
+             data.notes is string && data.notes.size() <= 500 &&
+             data.isFavorite is bool &&
+             data.usageCount is number && data.usageCount >= 0 && data.usageCount <= 100000;
+    }
+
     match /users/{userId} {
       allow get: if isOwner(userId) && isValidId(userId);
       allow list: if isOwner(userId) && existing().userId == request.auth.uid;
@@ -290,6 +308,45 @@ service cloud.firestore {
                          incoming().diff(existing()).affectedKeys().hasOnly(['question', 'response', 'language', 'updatedAt']);
 
         allow delete: if isOwner(userId) && isValidId(userId) && isValidId(messageId);
+      }
+
+      // Subcollection: savedRecipes
+      match /savedRecipes/{recipeId} {
+        allow get: if isOwner(userId) && isValidId(userId) && isValidId(recipeId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(userId) &&
+                         isValidId(recipeId) &&
+                         incoming().keys().hasAll([
+                           'userId', 'title', 'category', 'mealType',
+                           'totalCalories', 'totalProteinG', 'totalCarbsG', 'totalFatG',
+                           'totalFiberG', 'totalWeightG', 'items', 'notes',
+                           'isFavorite', 'usageCount', 'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'userId', 'title', 'category', 'mealType',
+                           'totalCalories', 'totalProteinG', 'totalCarbsG', 'totalFatG',
+                           'totalFiberG', 'totalWeightG', 'items', 'notes',
+                           'isFavorite', 'usageCount', 'createdAt', 'updatedAt'
+                         ]) &&
+                         isValidSavedRecipe(incoming(), userId) &&
+                         isValidTimestampsOnCreate(incoming());
+
+        allow update: if isOwner(userId) &&
+                         isValidId(userId) &&
+                         isValidId(recipeId) &&
+                         isValidSavedRecipe(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         isValidTimestampsOnUpdate(incoming(), existing()) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'title', 'category', 'mealType',
+                           'totalCalories', 'totalProteinG', 'totalCarbsG', 'totalFatG',
+                           'totalFiberG', 'totalWeightG', 'items', 'notes',
+                           'isFavorite', 'usageCount', 'updatedAt'
+                         ]);
+
+        allow delete: if isOwner(userId) && isValidId(userId) && isValidId(recipeId);
       }
     }
   }

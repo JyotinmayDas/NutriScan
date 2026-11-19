@@ -76,6 +76,12 @@ interface LocalDiaryDao {
     @Query("SELECT * FROM local_diary_entries WHERE userId = :userId ORDER BY updatedAtMillis DESC")
     fun observeCachedEntries(userId: String): Flow<List<LocalDiaryEntity>>
 
+    @Query("SELECT * FROM local_diary_entries WHERE userId = :userId ORDER BY updatedAtMillis DESC")
+    suspend fun getCachedEntries(userId: String): List<LocalDiaryEntity>
+
+    @Query("SELECT * FROM local_diary_entries WHERE userId = :userId ORDER BY updatedAtMillis DESC LIMIT :limit")
+    suspend fun getRecentCachedScans(userId: String, limit: Int): List<LocalDiaryEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertEntries(entries: List<LocalDiaryEntity>)
 

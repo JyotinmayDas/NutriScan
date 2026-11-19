@@ -1,4 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">NutriScan AI</string>
+    <string name="admob_app_id" translatable="false">ca-app-pub-7344344105416382~9014548996</string>
+    <string name="admob_banner_ad_unit_id" translatable="false">ca-app-pub-7344344105416382/9409687706</string>
+    <string name="admob_interstitial_ad_unit_id" translatable="false">ca-app-pub-7344344105416382/9162275693</string>
+    <string name="admob_app_open_ad_unit_id" translatable="false">ca-app-pub-7344344105416382/1878295007</string>
+    <string name="admob_native_ad_unit_id" translatable="false">ca-app-pub-7344344105416382/1435441875</string>
 </resources>

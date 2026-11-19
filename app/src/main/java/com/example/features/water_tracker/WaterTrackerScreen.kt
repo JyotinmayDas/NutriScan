@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import com.example.model.UserProfile
 import com.example.model.WaterRecord
 import com.example.ui.theme.WaterBlue
+import com.example.widgets.CircularHydrationTrackerCard
 import kotlin.math.roundToInt
 
 @Composable
@@ -56,6 +57,7 @@ fun WaterTrackerScreen(
     selectedDateKey: String,
     waterRecords: List<WaterRecord>,
     onAddWater: (Int) -> Unit,
+    onDecrementWater: (Int) -> Unit = {},
     onDeleteWater: (String) -> Unit,
     onUpdateWaterGoal: (Int) -> Unit,
     onBack: () -> Unit
@@ -66,7 +68,6 @@ fun WaterTrackerScreen(
     val todayLogs = waterRecords.filter { it.dateKey == selectedDateKey }
     val todayTotalMl = todayLogs.sumOf { it.quantity }
     val goalMl = profile.dailyWaterGoalMl.coerceAtLeast(500)
-    val progress = (todayTotalMl.toFloat() / goalMl.toFloat()).coerceIn(0f, 1f)
 
     LazyColumn(
         modifier = Modifier
@@ -90,7 +91,8 @@ fun WaterTrackerScreen(
                     }
                     Text(
                         text = "Water Intake Tracker",
-                        style = MaterialTheme.typography.headlineMedium
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.ExtraBold
                     )
                 }
                 OutlinedButton(onClick = { showGoalConfigDialog = true }) {
@@ -100,58 +102,17 @@ fun WaterTrackerScreen(
         }
 
         item {
-            Card(
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(20.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.WaterDrop,
-                            contentDescription = null,
-                            tint = WaterBlue
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "$todayTotalMl / $goalMl ml (${(progress * 100).roundToInt()}%)",
-                            style = MaterialTheme.typography.headlineMedium,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(12.dp))
-                    LinearProgressIndicator(
-                        progress = { progress },
-                        color = WaterBlue,
-                        trackColor = MaterialTheme.colorScheme.surface,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(12.dp)
-                            .clip(RoundedCornerShape(6.dp))
-                    )
-                    Spacer(modifier = Modifier.height(14.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        listOf(150, 250, 500).forEach { ml ->
-                            Button(
-                                onClick = { onAddWater(ml) },
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text("+${ml}ml")
-                            }
-                        }
-                        FilledTonalButton(
-                            onClick = { showCustomAmountDialog = true },
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Icon(imageVector = Icons.Default.Add, contentDescription = null)
-                            Text("Custom")
-                        }
-                    }
-                }
-            }
+            CircularHydrationTrackerCard(
+                todayWaterMl = todayTotalMl,
+                waterGoalMl = goalMl,
+                todayLogs = todayLogs,
+                onAddWater = onAddWater,
+                onDecrementWater = onDecrementWater,
+                onDeleteWater = onDeleteWater,
+                onUpdateWaterGoal = onUpdateWaterGoal,
+                onOpenFullTracker = null,
+                isCloudSynced = profile.userId != "guest_local_user"
+            )
         }
 
         item {

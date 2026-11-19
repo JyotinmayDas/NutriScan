@@ -171,3 +171,172 @@ test("Shadow update & value poisoning rejected by validation blueprint", async (
     })
   );
 });
+
+test("Authenticated user can create, list, update favorite, and delete savedRecipes", async () => {
+  const aliceDb = testEnv.authenticatedContext(ALICE_UID).firestore();
+  const now = new Date();
+  const recipeRef = aliceDb.collection("users").doc(ALICE_UID).collection("savedRecipes").doc("recipe_1");
+
+  await assertSucceeds(
+    recipeRef.set({
+      userId: ALICE_UID,
+      title: "Sunday Dal Bhat Combo",
+      category: "Scanned Combo",
+      mealType: "Lunch",
+      totalCalories: 640,
+      totalProteinG: 24.5,
+      totalCarbsG: 98.0,
+      totalFatG: 14.2,
+      totalFiberG: 9.5,
+      totalWeightG: 420.0,
+      items: [
+        {
+          foodName: "Steamed White Rice",
+          quantityG: 200.0,
+          caloriesKcal: 260,
+          proteinG: 5.2,
+          carbohydratesG: 56.0,
+          fatG: 0.6,
+          fiberG: 1.0,
+          mealSlot: "Lunch",
+        },
+        {
+          foodName: "Yellow Dal Tadka",
+          quantityG: 220.0,
+          caloriesKcal: 380,
+          proteinG: 19.3,
+          carbohydratesG: 42.0,
+          fatG: 13.6,
+          fiberG: 8.5,
+          mealSlot: "Lunch",
+        },
+      ],
+      notes: "Less oil tadka",
+      isFavorite: true,
+      usageCount: 0,
+      createdAt: now,
+      updatedAt: now,
+    })
+  );
+
+  await assertSucceeds(
+    aliceDb
+      .collection("users")
+      .doc(ALICE_UID)
+      .collection("savedRecipes")
+      .where("userId", "==", ALICE_UID)
+      .get()
+  );
+
+  await assertSucceeds(
+    recipeRef.update({
+      title: "Sunday Dal Bhat Combo (Light)",
+      category: "Scanned Combo",
+      mealType: "Lunch",
+      totalCalories: 640,
+      totalProteinG: 24.5,
+      totalCarbsG: 98.0,
+      totalFatG: 14.2,
+      totalFiberG: 9.5,
+      totalWeightG: 420.0,
+      items: [
+        {
+          foodName: "Steamed White Rice",
+          quantityG: 200.0,
+          caloriesKcal: 260,
+          proteinG: 5.2,
+          carbohydratesG: 56.0,
+          fatG: 0.6,
+          fiberG: 1.0,
+          mealSlot: "Lunch",
+        },
+      ],
+      notes: "Updated note",
+      isFavorite: false,
+      usageCount: 1,
+      updatedAt: new Date(),
+    })
+  );
+
+  await assertSucceeds(recipeRef.delete());
+});
+
+test("savedRecipes enforces authentication, cross-user isolation, and schema constraints", async () => {
+  const now = new Date();
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await context.firestore().collection("users").doc(ALICE_UID).collection("savedRecipes").doc("alice_recipe").set({
+      userId: ALICE_UID,
+      title: "Masala Dosa Breakfast",
+      category: "Favorite Meal",
+      mealType: "Breakfast",
+      totalCalories: 410,
+      totalProteinG: 11.0,
+      totalCarbsG: 62.0,
+      totalFatG: 12.0,
+      totalFiberG: 5.0,
+      totalWeightG: 250.0,
+      items: [{ foodName: "Masala Dosa", quantityG: 250.0, caloriesKcal: 410, proteinG: 11.0, carbohydratesG: 62.0, fatG: 12.0, fiberG: 5.0, mealSlot: "Breakfast" }],
+      notes: "",
+      isFavorite: true,
+      usageCount: 0,
+      createdAt: now,
+      updatedAt: now,
+    });
+  });
+
+  // 1. Unauthenticated read rejected
+  const unauthDb = testEnv.unauthenticatedContext().firestore();
+  await assertFails(
+    unauthDb.collection("users").doc(ALICE_UID).collection("savedRecipes").get()
+  );
+
+  // 2. Cross-user read & write rejected
+  const bobDb = testEnv.authenticatedContext(BOB_UID).firestore();
+  await assertFails(
+    bobDb.collection("users").doc(ALICE_UID).collection("savedRecipes").doc("alice_recipe").get()
+  );
+  await assertFails(
+    bobDb.collection("users").doc(ALICE_UID).collection("savedRecipes").doc("bob_inject").set({
+      userId: ALICE_UID,
+      title: "Injected",
+      category: "Scanned Combo",
+      mealType: "Lunch",
+      totalCalories: 100,
+      totalProteinG: 5,
+      totalCarbsG: 10,
+      totalFatG: 2,
+      totalFiberG: 1,
+      totalWeightG: 100,
+      items: [{ foodName: "Hack" }],
+      notes: "",
+      isFavorite: true,
+      usageCount: 0,
+      createdAt: now,
+      updatedAt: now,
+    })
+  );
+
+  // 3. Invalid category or empty items array rejected for owner
+  const aliceDb = testEnv.authenticatedContext(ALICE_UID).firestore();
+  await assertFails(
+    aliceDb.collection("users").doc(ALICE_UID).collection("savedRecipes").doc("bad_cat").set({
+      userId: ALICE_UID,
+      title: "Bad Category Recipe",
+      category: "UnknownCategory",
+      mealType: "Lunch",
+      totalCalories: 200,
+      totalProteinG: 10,
+      totalCarbsG: 20,
+      totalFatG: 5,
+      totalFiberG: 2,
+      totalWeightG: 150,
+      items: [],
+      notes: "",
+      isFavorite: true,
+      usageCount: 0,
+      createdAt: now,
+      updatedAt: now,
+    })
+  );
+});
+

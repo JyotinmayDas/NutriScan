@@ -1,21 +1,23 @@
 package com.example.core.navigation
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.Book
-import androidx.compose.material.icons.filled.CenterFocusStrong
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.outlined.CameraAlt
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.RestaurantMenu
+import androidx.compose.material.icons.rounded.CameraAlt
+import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.RestaurantMenu
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -30,13 +32,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -51,40 +53,30 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.core.LocalizationCatalog
+import com.example.core.ads.AdMobManager
+import com.example.core.ads.findActivity
 import com.example.core.signOutUser
-import com.example.features.water_tracker.WaterTrackerScreen
 import com.example.model.UserProfile
-import com.example.ui.screens.AiCoachAndMealPlannerScreen
 import com.example.ui.screens.AiScannerScreen
 import com.example.ui.screens.FoodDiaryAndDatabaseScreen
 import com.example.ui.screens.HomeDashboardScreen
 import com.example.ui.screens.OnboardingProfileDialog
+import com.example.ui.screens.PrivacyPolicyScreen
 import com.example.ui.screens.ProfileAndSettingsScreen
 import com.example.ui.theme.AppTheme
-import com.example.ui.theme.DarkCharcoalText
 import com.example.ui.theme.FreshGreenPrimary
-import com.example.ui.theme.LimeAccent
+import com.example.ui.theme.ThemePreferenceManager
 import com.example.viewmodel.NutriScanViewModel
+import com.example.widgets.AnchoredAdaptiveBannerAd
 
-/**
- * Clean Architecture Route Definitions for NutriScan AI.
- */
 object AppRoutes {
-    const val AUTH = "auth"
-    const val ONBOARDING = "onboarding"
     const val HOME = "dashboard"
     const val SCAN = "food_scanner"
     const val DIARY = "food_diary"
-    const val AI_COACH = "ai_coach"
     const val PROFILE = "profile"
-    const val WATER_TRACKER = "water_tracker"
+    const val PRIVACY_POLICY = "privacy_policy"
 }
 
-/**
- * Base AppRouter component managing all primary tabs and feature routes
- * using Jetpack Navigation Compose, styled with a floating rounded bottom bar
- * matching the uploaded UI designs.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppRouter(
@@ -92,31 +84,33 @@ fun AppRouter(
     currentUserId: String,
     userEmail: String,
     userDisplayName: String,
+    onExitGuestMode: () -> Unit = {},
     navController: NavHostController = rememberNavController()
 ) {
     val profileState by viewModel.userProfileState.collectAsStateWithLifecycle()
     val profile = profileState ?: UserProfile(
         userId = currentUserId,
-        name = userDisplayName.ifBlank { "NutriScan Explorer" },
+        name = userDisplayName.ifBlank { "User" },
         email = userEmail
     )
-    val isDarkMode by viewModel.isDarkMode.collectAsStateWithLifecycle()
+    val vmDarkMode by viewModel.isDarkMode.collectAsStateWithLifecycle()
+    val themeMode by ThemePreferenceManager.themeMode.collectAsStateWithLifecycle()
+    val isDarkMode = ThemePreferenceManager.resolveIsDarkTheme(themeMode, vmDarkMode)
     val selectedDateKey by viewModel.selectedDateKey.collectAsStateWithLifecycle()
     val diaryEntries by viewModel.foodDiaryEntries.collectAsStateWithLifecycle()
     val waterHistory by viewModel.waterHistory.collectAsStateWithLifecycle()
-    val weightHistory by viewModel.weightHistory.collectAsStateWithLifecycle()
-    val mealPlans by viewModel.mealPlans.collectAsStateWithLifecycle()
-    val aiHistory by viewModel.aiHistory.collectAsStateWithLifecycle()
+    val savedRecipes by viewModel.savedRecipes.collectAsStateWithLifecycle()
     val scanUiState by viewModel.scanUiState.collectAsStateWithLifecycle()
-    val coachUiState by viewModel.coachUiState.collectAsStateWithLifecycle()
-    val mealPlanUiState by viewModel.mealPlanUiState.collectAsStateWithLifecycle()
     val statusBanner by viewModel.statusBanner.collectAsStateWithLifecycle()
+    val needsProfileSetup by viewModel.needsProfileSetup.collectAsStateWithLifecycle()
 
     val strings = LocalizationCatalog.forLanguage(profile.language)
     var showProfileEditSheet by rememberSaveable { mutableStateOf(false) }
+    var pendingDiarySubTab by rememberSaveable { mutableIntStateOf(0) }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
+    val activity = remember(context) { context.findActivity() }
     val scope = rememberCoroutineScope()
     val credentialManager = remember { CredentialManager.create(context) }
 
@@ -133,6 +127,10 @@ fun AppRouter(
         }
     }
 
+    LaunchedEffect(profile.isPremium) {
+        AdMobManager.updatePremiumStatus(profile.isPremium)
+    }
+
     LaunchedEffect(statusBanner) {
         val msg = statusBanner
         if (!msg.isNullOrBlank()) {
@@ -141,93 +139,121 @@ fun AppRouter(
         }
     }
 
-    val navItemColors = NavigationBarItemDefaults.colors(
-        selectedIconColor = DarkCharcoalText,
-        selectedTextColor = FreshGreenPrimary,
-        indicatorColor = LimeAccent,
-        unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-        unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
-    )
+    val handleToggleDarkMode: (Boolean) -> Unit = { enabled ->
+        ThemePreferenceManager.setDarkMode(context, enabled)
+        viewModel.toggleDarkMode(enabled)
+    }
 
     AppTheme(darkTheme = isDarkMode) {
         Scaffold(
             contentWindowInsets = WindowInsets.safeDrawing,
             snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
             bottomBar = {
-                Surface(
-                    shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-                    shadowElevation = 10.dp,
-                    color = MaterialTheme.colorScheme.surface
-                ) {
-                    NavigationBar(
-                        containerColor = Color.Transparent,
-                        tonalElevation = 0.dp,
-                        modifier = Modifier.clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
-                    ) {
-                        NavigationBarItem(
-                            selected = currentRoute == AppRoutes.HOME,
-                            onClick = { navigateToTopLevel(AppRoutes.HOME) },
-                            icon = { Icon(Icons.Default.Home, contentDescription = strings.navHome) },
-                            label = { Text(strings.navHome, fontWeight = FontWeight.SemiBold) },
-                            colors = navItemColors,
-                            modifier = Modifier.testTag("nav_home")
+                if (currentRoute != AppRoutes.PRIVACY_POLICY) {
+                    Column {
+                        AnchoredAdaptiveBannerAd(
+                            isPremium = profile.isPremium
                         )
-                        NavigationBarItem(
-                            selected = currentRoute == AppRoutes.DIARY,
-                            onClick = { navigateToTopLevel(AppRoutes.DIARY) },
-                            icon = { Icon(Icons.Default.Book, contentDescription = strings.navDiary) },
-                            label = { Text(strings.navDiary, fontWeight = FontWeight.SemiBold) },
-                            colors = navItemColors,
-                            modifier = Modifier.testTag("nav_diary")
-                        )
-                        // Prominent Center Circular Dark/Green Scan Button (Matching Uploaded Images 1, 3, 9, 10)
-                        NavigationBarItem(
-                            selected = currentRoute == AppRoutes.SCAN,
-                            onClick = { navigateToTopLevel(AppRoutes.SCAN) },
-                            icon = {
-                                FloatingActionButton(
-                                    onClick = { navigateToTopLevel(AppRoutes.SCAN) },
-                                    shape = CircleShape,
-                                    containerColor = if (currentRoute == AppRoutes.SCAN) FreshGreenPrimary else DarkCharcoalText,
-                                    contentColor = Color.White,
-                                    elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 6.dp),
-                                    modifier = Modifier.size(52.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.CenterFocusStrong,
-                                        contentDescription = strings.navScan,
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                }
-                            },
-                            label = {
-                                Text(
-                                    text = strings.navScan,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = FreshGreenPrimary
-                                )
-                            },
-                            colors = NavigationBarItemDefaults.colors(
-                                indicatorColor = Color.Transparent
+                        Surface(
+                            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+                            shadowElevation = 6.dp,
+                            color = MaterialTheme.colorScheme.surface,
+                            border = BorderStroke(
+                                1.dp,
+                                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)
                             ),
-                            modifier = Modifier.testTag("nav_scan")
-                        )
-                        NavigationBarItem(
-                            selected = currentRoute == AppRoutes.AI_COACH,
-                            onClick = { navigateToTopLevel(AppRoutes.AI_COACH) },
-                            icon = { Icon(Icons.Default.AutoAwesome, contentDescription = strings.navCoach) },
-                            label = { Text(strings.navCoach, fontWeight = FontWeight.SemiBold) },
-                            colors = navItemColors,
-                            modifier = Modifier.testTag("nav_coach")
-                        )
-                        NavigationBarItem(
-                            selected = currentRoute == AppRoutes.PROFILE,
-                            onClick = { navigateToTopLevel(AppRoutes.PROFILE) },
-                            icon = { Icon(Icons.Default.Person, contentDescription = strings.navProfile) },
-                            label = { Text(strings.navProfile, fontWeight = FontWeight.SemiBold) },
-                            colors = navItemColors,
-                            modifier = Modifier.testTag("nav_profile")
-                        )
+                            modifier = Modifier.testTag("main_bottom_navigation_bar")
+                        ) {
+                            NavigationBar(
+                                containerColor = Color.Transparent,
+                                tonalElevation = 0.dp,
+                                windowInsets = WindowInsets.navigationBars
+                            ) {
+                                val itemColors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = FreshGreenPrimary,
+                                    selectedTextColor = FreshGreenPrimary,
+                                    indicatorColor = FreshGreenPrimary.copy(alpha = 0.14f),
+                                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+
+                                NavigationBarItem(
+                                    selected = currentRoute == AppRoutes.HOME,
+                                    onClick = { navigateToTopLevel(AppRoutes.HOME) },
+                                    icon = {
+                                        Icon(
+                                            imageVector = if (currentRoute == AppRoutes.HOME) Icons.Rounded.Home else Icons.Outlined.Home,
+                                            contentDescription = strings.navHome
+                                        )
+                                    },
+                                    label = {
+                                        Text(
+                                            text = strings.navHome,
+                                            fontWeight = if (currentRoute == AppRoutes.HOME) FontWeight.Bold else FontWeight.Medium
+                                        )
+                                    },
+                                    colors = itemColors,
+                                    modifier = Modifier.testTag("nav_home")
+                                )
+
+                                NavigationBarItem(
+                                    selected = currentRoute == AppRoutes.SCAN,
+                                    onClick = { navigateToTopLevel(AppRoutes.SCAN) },
+                                    icon = {
+                                        Icon(
+                                            imageVector = if (currentRoute == AppRoutes.SCAN) Icons.Rounded.CameraAlt else Icons.Outlined.CameraAlt,
+                                            contentDescription = strings.navScan
+                                        )
+                                    },
+                                    label = {
+                                        Text(
+                                            text = strings.navScan,
+                                            fontWeight = if (currentRoute == AppRoutes.SCAN) FontWeight.Bold else FontWeight.Medium
+                                        )
+                                    },
+                                    colors = itemColors,
+                                    modifier = Modifier.testTag("nav_scan")
+                                )
+
+                                NavigationBarItem(
+                                    selected = currentRoute == AppRoutes.DIARY,
+                                    onClick = { navigateToTopLevel(AppRoutes.DIARY) },
+                                    icon = {
+                                        Icon(
+                                            imageVector = if (currentRoute == AppRoutes.DIARY) Icons.Rounded.RestaurantMenu else Icons.Outlined.RestaurantMenu,
+                                            contentDescription = strings.navDiary
+                                        )
+                                    },
+                                    label = {
+                                        Text(
+                                            text = strings.navDiary,
+                                            fontWeight = if (currentRoute == AppRoutes.DIARY) FontWeight.Bold else FontWeight.Medium
+                                        )
+                                    },
+                                    colors = itemColors,
+                                    modifier = Modifier.testTag("nav_diary")
+                                )
+
+                                NavigationBarItem(
+                                    selected = currentRoute == AppRoutes.PROFILE,
+                                    onClick = { navigateToTopLevel(AppRoutes.PROFILE) },
+                                    icon = {
+                                        Icon(
+                                            imageVector = if (currentRoute == AppRoutes.PROFILE) Icons.Rounded.Person else Icons.Outlined.Person,
+                                            contentDescription = strings.navProfile
+                                        )
+                                    },
+                                    label = {
+                                        Text(
+                                            text = strings.navProfile,
+                                            fontWeight = if (currentRoute == AppRoutes.PROFILE) FontWeight.Bold else FontWeight.Medium
+                                        )
+                                    },
+                                    colors = itemColors,
+                                    modifier = Modifier.testTag("nav_profile")
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -241,34 +267,45 @@ fun AppRouter(
             ) {
                 composable(AppRoutes.HOME) {
                     HomeDashboardScreen(
-                        strings = strings,
                         profile = profile,
                         selectedDateKey = selectedDateKey,
                         diaryEntries = diaryEntries,
                         waterRecords = waterHistory,
-                        weightRecords = weightHistory,
-                        remainingScansToday = viewModel.getRemainingScansToday(),
+                        savedRecipes = savedRecipes,
+                        isDarkMode = isDarkMode,
+                        onToggleDarkMode = handleToggleDarkMode,
                         onNavigateToScan = { navigateToTopLevel(AppRoutes.SCAN) },
                         onNavigateToDiary = { navigateToTopLevel(AppRoutes.DIARY) },
-                        onNavigateToCoach = { navigateToTopLevel(AppRoutes.AI_COACH) },
+                        onNavigateToMyRecipes = {
+                            pendingDiarySubTab = 1
+                            navigateToTopLevel(AppRoutes.DIARY)
+                        },
                         onQuickAddWater = { ml -> viewModel.logWaterIntake(ml) },
-                        onOpenOnboardingEdit = { showProfileEditSheet = true }
+                        onDecrementWater = { ml -> viewModel.decrementWaterIntake(ml) },
+                        onSaveProfile = { updated -> viewModel.updateProfile(updated) },
+                        onQuickLogSavedRecipe = { recipe -> viewModel.logSavedRecipeToDiary(recipe) }
                     )
                 }
 
                 composable(AppRoutes.SCAN) {
                     AiScannerScreen(
                         scanUiState = scanUiState,
-                        remainingScansToday = viewModel.getRemainingScansToday(),
-                        isPremium = profile.isPremium,
                         onAnalyzeBitmap = { bmp, hint -> viewModel.analyzeFoodImage(bmp, hint) },
+                        onAnalyzeText = { desc -> viewModel.analyzeFoodText(desc) },
                         onUpdateScannedItem = { idx, name, g -> viewModel.updateScannedFoodItem(idx, name, g) },
+                        onUpdatePortionMultiplier = { mult -> viewModel.updateScanPortionMultiplier(mult) },
                         onConfirmMealToDiary = { meal ->
                             viewModel.confirmScannedMealToDiary(meal)
-                            navigateToTopLevel(AppRoutes.DIARY)
+                            AdMobManager.showInterstitialIfReady(
+                                activity = activity,
+                                isPremium = profile.isPremium,
+                                onContinue = { navigateToTopLevel(AppRoutes.DIARY) }
+                            )
                         },
                         onResetScan = { viewModel.resetScanState() },
-                        onGrantBonusScan = { viewModel.grantBonusScanFromReward() }
+                        onSaveScannedComboToRecipes = { title, mealType ->
+                            viewModel.saveScannedMealToRecipes(title, mealType)
+                        }
                     )
                 }
 
@@ -282,22 +319,18 @@ fun AppRouter(
                         onAddManualFood = { entry -> viewModel.addManualFoodEntry(entry) },
                         onUpdateDiaryEntry = { entry, name, g -> viewModel.updateDiaryEntryPortion(entry, name, g) },
                         onDeleteDiaryEntry = { id -> viewModel.deleteDiaryEntry(id) },
-                        onCopyPreviousDayMeals = { fromDate, toDate -> viewModel.copyEntriesFromDate(fromDate, toDate) }
-                    )
-                }
-
-                composable(AppRoutes.AI_COACH) {
-                    AiCoachAndMealPlannerScreen(
                         profile = profile,
-                        diaryEntries = diaryEntries,
-                        weightHistory = weightHistory,
-                        mealPlans = mealPlans,
-                        aiHistory = aiHistory,
-                        coachUiState = coachUiState,
-                        mealPlanUiState = mealPlanUiState,
-                        onAskCoach = { q -> viewModel.askAiNutritionCoach(q) },
-                        onGenerateMealPlan = { diet -> viewModel.generatePersonalizedMealPlan(diet) },
-                        onLogWeight = { w, note -> viewModel.logWeightUpdate(w, note) }
+                        onSaveProfile = { updated -> viewModel.updateProfile(updated) },
+                        savedRecipes = savedRecipes,
+                        initialSubTab = pendingDiarySubTab,
+                        onInitialSubTabConsumed = { pendingDiarySubTab = 0 },
+                        onSaveCustomRecipe = { recipe -> viewModel.saveCustomRecipe(recipe) },
+                        onDeleteSavedRecipe = { id -> viewModel.deleteSavedRecipe(id) },
+                        onToggleSavedRecipeFavorite = { recipe -> viewModel.toggleSavedRecipeFavorite(recipe) },
+                        onLogSavedRecipe = { recipe, slot -> viewModel.logSavedRecipeToDiary(recipe, slot) },
+                        onSaveDiaryGroupAsRecipe = { title, mealType, entries ->
+                            viewModel.saveDiaryEntriesToRecipes(title, mealType, entries)
+                        }
                     )
                 }
 
@@ -305,51 +338,56 @@ fun AppRouter(
                     ProfileAndSettingsScreen(
                         profile = profile,
                         isDarkMode = isDarkMode,
-                        remainingScansToday = viewModel.getRemainingScansToday(),
-                        onToggleDarkMode = { viewModel.toggleDarkMode(it) },
+                        onToggleDarkMode = handleToggleDarkMode,
                         onSelectLanguage = { viewModel.setLanguage(it) },
-                        onTogglePremiumPlan = { viewModel.togglePremiumPlan(it) },
-                        onGrantBonusScan = { viewModel.grantBonusScanFromReward() },
                         onOpenEditProfileDialog = { showProfileEditSheet = true },
                         onSaveProfile = { updated -> viewModel.updateProfile(updated) },
+                        onOpenPrivacyPolicy = { navController.navigate(AppRoutes.PRIVACY_POLICY) },
                         onDeleteAccountData = {
                             viewModel.deleteAccountData {
-                                signOutUser(context, credentialManager, {}, scope)
+                                if (viewModel.isGuestMode) {
+                                    onExitGuestMode()
+                                } else {
+                                    signOutUser(context, credentialManager, {}, scope)
+                                }
                             }
                         },
                         onSignOut = {
-                            signOutUser(context, credentialManager, {}, scope)
+                            if (viewModel.isGuestMode) {
+                                onExitGuestMode()
+                            } else {
+                                signOutUser(context, credentialManager, {}, scope)
+                            }
                         }
                     )
                 }
 
-                composable(AppRoutes.WATER_TRACKER) {
-                    WaterTrackerScreen(
-                        profile = profile,
-                        selectedDateKey = selectedDateKey,
-                        waterRecords = waterHistory,
-                        onAddWater = { ml -> viewModel.logWaterIntake(ml) },
-                        onDeleteWater = { id -> viewModel.deleteWaterEntry(id) },
-                        onUpdateWaterGoal = { newGoal ->
-                            viewModel.updateProfile(profile.copy(dailyWaterGoalMl = newGoal))
-                        },
+                composable(AppRoutes.PRIVACY_POLICY) {
+                    PrivacyPolicyScreen(
                         onBack = { navController.popBackStack() }
                     )
                 }
             }
         }
 
-        if (showProfileEditSheet) {
+        if (needsProfileSetup || showProfileEditSheet) {
             ModalBottomSheet(
-                onDismissRequest = { showProfileEditSheet = false }
+                onDismissRequest = {
+                    if (needsProfileSetup) viewModel.dismissProfileSetup()
+                    showProfileEditSheet = false
+                }
             ) {
                 OnboardingProfileDialog(
                     currentProfile = profile,
+                    isInitialSetup = needsProfileSetup,
                     onSaveProfile = { updated ->
                         viewModel.updateProfile(updated)
                         showProfileEditSheet = false
                     },
-                    onSkip = { showProfileEditSheet = false }
+                    onSkip = {
+                        if (needsProfileSetup) viewModel.dismissProfileSetup()
+                        showProfileEditSheet = false
+                    }
                 )
             }
         }

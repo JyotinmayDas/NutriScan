@@ -7,6 +7,7 @@ import com.example.model.AiCoachMessage
 import com.example.model.FoodDatabaseItem
 import com.example.model.FoodDiaryEntry
 import com.example.model.MealPlanEntry
+import com.example.model.SavedRecipe
 import com.example.model.UserProfile
 import com.example.model.WaterRecord
 import com.example.model.WeightRecord
@@ -30,6 +31,10 @@ interface NutritionRepositoryContract {
     suspend fun addWeightRecord(weightKg: Double, dateKey: String, note: String): Result<String>
     fun observeAiHistory(): Flow<List<AiCoachMessage>>
     fun observeMealPlans(): Flow<List<MealPlanEntry>>
+    fun observeSavedRecipes(): Flow<List<SavedRecipe>>
+    suspend fun saveRecipe(recipe: SavedRecipe): Result<String>
+    suspend fun updateSavedRecipe(recipe: SavedRecipe): Result<Unit>
+    suspend fun deleteSavedRecipe(recipeId: String): Result<Unit>
     fun searchCatalog(query: String, category: String): List<FoodDatabaseItem>
 }
 
@@ -52,6 +57,10 @@ class DefaultNutritionRepository(
         delegate.addWeightRecord(weightKg, dateKey, note)
     override fun observeAiHistory(): Flow<List<AiCoachMessage>> = delegate.observeAiHistory()
     override fun observeMealPlans(): Flow<List<MealPlanEntry>> = delegate.observeMealPlans()
+    override fun observeSavedRecipes(): Flow<List<SavedRecipe>> = delegate.observeSavedRecipes()
+    override suspend fun saveRecipe(recipe: SavedRecipe): Result<String> = delegate.saveRecipe(recipe)
+    override suspend fun updateSavedRecipe(recipe: SavedRecipe): Result<Unit> = delegate.updateSavedRecipe(recipe)
+    override suspend fun deleteSavedRecipe(recipeId: String): Result<Unit> = delegate.deleteSavedRecipe(recipeId)
     override fun searchCatalog(query: String, category: String): List<FoodDatabaseItem> =
         FoodDatabaseCatalog.search(query, category)
 }

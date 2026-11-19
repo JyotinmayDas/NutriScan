@@ -17,8 +17,13 @@ android {
     applicationId = "com.aistudio.nutriscanai.vmpqzr"
     minSdk = 24
     targetSdk = 36
-    versionCode = 1
-    versionName = "1.0"
+    versionCode = 5
+    versionName = "5.0"
+
+    // AdMob Application ID (overridable via ADMOB_APP_ID environment variable)
+    manifestPlaceholders["admobAppId"] =
+      System.getenv("ADMOB_APP_ID")?.takeIf { it.isNotBlank() }
+        ?: "ca-app-pub-7344344105416382~9014548996"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
@@ -123,6 +128,11 @@ dependencies {
   implementation(libs.firebase.appcheck.debug)
   implementation(libs.kotlinx.coroutines.android)
   implementation(libs.kotlinx.coroutines.core)
+  implementation(libs.androidx.camera.core)
+  implementation(libs.androidx.camera.camera2)
+  implementation(libs.androidx.camera.lifecycle)
+  implementation(libs.androidx.camera.view)
+  implementation(libs.play.services.ads)
   // implementation(libs.converter.moshi)
   // implementation(libs.logging.interceptor)
   // implementation(libs.moshi.kotlin)

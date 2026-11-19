@@ -74,4 +74,20 @@ class ExampleUnitTest {
         val riceResults = FoodDatabaseCatalog.search("ভাত", "All")
         assertTrue(riceResults.isNotEmpty())
     }
+
+    @Test
+    fun foodDatabaseCatalog_includesIndianSouthIndianAndNepaliRecipes() {
+        val indianRecipes = FoodDatabaseCatalog.search("", "Indian Foods", recipesOnly = true)
+        assertTrue(indianRecipes.size >= 8)
+        assertTrue(indianRecipes.all { it.hasRecipe && it.ingredients.isNotEmpty() && it.recipeSteps.isNotEmpty() })
+
+        val southIndianRecipes = FoodDatabaseCatalog.search("", "South Indian Foods", recipesOnly = true)
+        assertTrue(southIndianRecipes.size >= 8)
+        assertTrue(southIndianRecipes.any { it.nameEn.contains("Masala Dosa", ignoreCase = true) })
+
+        val nepaliRecipes = FoodDatabaseCatalog.search("", "Nepali Foods", recipesOnly = true)
+        assertTrue(nepaliRecipes.size >= 8)
+        assertTrue(nepaliRecipes.any { it.nameEn.contains("Dal Bhat", ignoreCase = true) })
+        assertTrue(nepaliRecipes.any { it.nameEn.contains("Momo", ignoreCase = true) })
+    }
 }

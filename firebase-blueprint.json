@@ -160,6 +160,47 @@
         "updatedAt": { "type": "string", "format": "date-time", "description": "Server update timestamp" }
       },
       "required": ["userId", "question", "response", "language", "createdAt", "updatedAt"]
+    },
+    "SavedRecipe": {
+      "title": "SavedRecipe",
+      "description": "User-saved favorite scanned food combination, custom recipe, or custom meal plan for quick future logging.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner user UID" },
+        "title": { "type": "string", "description": "Recipe or meal plan title" },
+        "category": { "type": "string", "description": "Scanned Combo, Custom Meal Plan, or Favorite Meal" },
+        "mealType": { "type": "string", "description": "Breakfast, Lunch, Dinner, Snacks, or Full Day" },
+        "totalCalories": { "type": "integer", "description": "Total calories in kcal" },
+        "totalProteinG": { "type": "number", "description": "Total protein in grams" },
+        "totalCarbsG": { "type": "number", "description": "Total carbohydrates in grams" },
+        "totalFatG": { "type": "number", "description": "Total fat in grams" },
+        "totalFiberG": { "type": "number", "description": "Total dietary fiber in grams" },
+        "totalWeightG": { "type": "number", "description": "Total portion weight in grams" },
+        "items": { "type": "array", "description": "Bounded list (1-30) of food items in this saved recipe or meal plan" },
+        "notes": { "type": "string", "description": "Preparation notes or meal plan tips" },
+        "isFavorite": { "type": "boolean", "description": "Whether pinned as a favorite" },
+        "usageCount": { "type": "integer", "description": "Number of times logged to diary" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server creation timestamp (FieldValue.serverTimestamp())" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server update timestamp (FieldValue.serverTimestamp())" }
+      },
+      "required": [
+        "userId",
+        "title",
+        "category",
+        "mealType",
+        "totalCalories",
+        "totalProteinG",
+        "totalCarbsG",
+        "totalFatG",
+        "totalFiberG",
+        "totalWeightG",
+        "items",
+        "notes",
+        "isFavorite",
+        "usageCount",
+        "createdAt",
+        "updatedAt"
+      ]
     }
   },
   "firestore": {
@@ -186,6 +227,10 @@
     "/users/{userId}/aiHistory/{messageId}": {
       "schema": { "$ref": "#/entities/AiCoachMessage" },
       "description": "Per-user AI Nutrition Coach conversation history."
+    },
+    "/users/{userId}/savedRecipes/{recipeId}": {
+      "schema": { "$ref": "#/entities/SavedRecipe" },
+      "description": "Per-user saved favorite scanned food combinations and custom meal plans."
     }
   }
 }
